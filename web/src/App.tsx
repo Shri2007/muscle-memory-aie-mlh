@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Game from "./Game";
 
 type Tier = "reflex" | "jev" | "gemini";
 type Decision = {
@@ -114,6 +115,17 @@ function dedent(snippet: string) {
 }
 
 export default function App() {
+  const [hash, setHash] = useState(location.hash);
+  useEffect(() => {
+    const change = () => setHash(location.hash);
+    window.addEventListener("hashchange", change);
+    return () => window.removeEventListener("hashchange", change);
+  }, []);
+  if (hash === "#host" || hash.startsWith("#join/")) return <Game key={hash} hash={hash} />;
+  return <Dashboard />;
+}
+
+function Dashboard() {
   const s = usePoll<State>("/api/state", 700);
   const rules = usePoll<Rules>("/api/rules", 2000);
   const tiger = usePoll<Tiger>("/api/tiger", 4000);
@@ -135,6 +147,7 @@ export default function App() {
             AI agents write sloppy code. A fast AI makes most cleanup calls, an expert AI takes the hard ones, and proven calls become free habits.
           </p>
         </div>
+        <a href="#host">Host a game</a>
         <Status s={s} has={has} />
       </header>
 
