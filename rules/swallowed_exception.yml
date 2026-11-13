@@ -4,12 +4,12 @@ rules:
   languages:
   - python
   severity: WARNING
-  message: Catching broad Exception to return or assign a fallback silently hides real bugs.
-  pattern-regex: (?m)^[ \t]*except[ \t]+Exception[ \t]*:[ \t]*\n[ \t]+(?:return\b|pass\b|\w+[ \t]*=(?!=))
+  message: Silently catching broad exceptions hides bugs instead of letting failures surface.
+  pattern-regex: ^\s*except(?:\s+Exception)?:\s+(?:return\b|pass\b|\w+\s*=)
   metadata:
     kind: swallowed_exception
     support: 5
     version: 1
     active: true
     verdict: cut
-    learned_at: '2026-11-13T19:53:33+00:00'
+    learned_at: '2026-11-13T19:57:13+00:00'
