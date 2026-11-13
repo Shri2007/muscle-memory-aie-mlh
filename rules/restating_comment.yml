@@ -1,0 +1,15 @@
+# learned by Muscle Memory from 5 verified decisions
+rules:
+- id: mm-restating_comment-v1
+  languages:
+  - python
+  severity: WARNING
+  message: Comment narrates what the code does instead of explaining why.
+  pattern-regex: '^([ \t]*)# [A-Z][a-z]+(?: [a-zA-Z]+){1,5}\r?\n\1\S'
+  metadata:
+    kind: restating_comment
+    support: 5
+    version: 1
+    active: true
+    verdict: cut
+    learned_at: '2026-11-13T19:45:21+00:00'
