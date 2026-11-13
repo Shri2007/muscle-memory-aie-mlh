@@ -133,3 +133,17 @@ tbody tr + tr td { border-top: 1px solid var(--line); }
   .arrow { transform: rotate(90deg); font-size: 26px; }
   .panel, details { padding: 16px; }
 }
+
+/* Habits as a CI check */
+.ci { margin-top: 20px; }
+.ci-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
+.ci-head h2 { margin-bottom: 4px; }
+.ci-head p { margin: 0; max-width: 60ch; }
+.ci-verdict { border: 1px solid color-mix(in srgb, var(--cut) 55%, var(--line)); background: color-mix(in srgb, var(--cut) 10%, var(--panel)); border-radius: 12px; padding: 10px 16px; }
+.ci-verdict b { display: block; color: var(--cut); font-size: 22px; }
+.ci-verdict span { color: var(--dim); font-size: 14px; }
+.ci-code { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 0; font-size: 13px; max-height: 360px; overflow: auto; }
+.ci-code > div { padding: 0 14px; white-space: pre; }
+.ci-code .hit { background: color-mix(in srgb, var(--cut) 14%, transparent); }
+.ci-code .ln { display: inline-block; width: 2.5em; color: var(--dim); user-select: none; }
+.ci-code .tag { margin-left: 16px; color: var(--cut); font-family: Geist, system-ui, sans-serif; font-size: 12px; }

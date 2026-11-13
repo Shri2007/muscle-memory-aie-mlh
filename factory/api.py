@@ -253,6 +253,26 @@ def game_state(code: str, player_id: str = "") -> dict:
         return result
 
 
+
+@app.get("/api/ci")
+def ci() -> dict:
+    """Run the learned rules (no AI) on an agent-written file, like the CI check does."""
+    from . import reflex
+    f = config.ROOT / "examples" / "agent_slop.py"
+    if not f.exists():
+        return {"available": False}
+    text = f.read_text()
+    t = time.perf_counter()
+    hits = []
+    for rule in reflex.load().values():
+        if not rule.active:
+            continue
+        for m in __import__("re").finditer(rule.regex, text, __import__("re").MULTILINE):
+            line = text.count("\n", 0, m.start() + len(m.group(0)) - len(m.group(0).lstrip())) + 1
+            hits.append({"rule": rule.id, "kind": rule.kind, "message": rule.message, "line": line})
+    return {"available": True, "file": "examples/agent_slop.py", "code": text.splitlines(),
+            "hits": sorted(hits, key=lambda h: h["line"]), "ms": (time.perf_counter() - t) * 1000}
+
 dist = Path(config.ROOT / "web" / "dist")
 if dist.exists():
     app.mount("/", StaticFiles(directory=dist, html=True), name="web")
