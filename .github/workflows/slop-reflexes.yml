@@ -1,0 +1,74 @@
+# Runs the reflexes Muscle Memory learned (rules/*.yml, Semgrep pattern-regex) on the Python files a PR changes.
+# A match fails the check. Demoted rules (metadata.active: false) are skipped.
+# No `paths:` filter on purpose: if a team makes this a required check, it must always report a result.
+name: slop-reflexes
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  SEMGREP_VERSION: "1.185.0"
+
+jobs:
+  reflexes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect active rules
+        id: rules
+        run: |
+          # Relative dir so Semgrep reports short ids like reflexes.mm-swallowed_exception-v2
+          rm -rf reflexes && mkdir reflexes
+          shopt -s nullglob
+          count=0
+          for f in rules/*.yml rules/*.yaml; do
+            if grep -qE '^\s*active:\s*false\b' "$f"; then
+              echo "skip (demoted): $f"
+            else
+              cp "$f" reflexes/
+              count=$((count + 1))
+            fi
+          done
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -eq 0 ]; then
+            echo "::notice title=slop-reflexes::No active learned rules in rules/ yet. Skipping."
+          fi
+
+      - name: Collect changed Python files
+        id: files
+        if: steps.rules.outputs.count != '0'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # examples/ holds intentional slop for the demo, so it is never checked.
+          git -c core.quotePath=false diff -z --name-only --diff-filter=ACMR \
+            "origin/${BASE_REF}...HEAD" -- '*.py' ':(exclude)examples/**' > "$RUNNER_TEMP/changed.z"
+          n=$(tr -cd '\0' < "$RUNNER_TEMP/changed.z" | wc -c | tr -d ' ')
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          if [ "$n" -eq 0 ]; then
+            echo "::notice title=slop-reflexes::No Python files changed. Skipping."
+          else
+            tr '\0' '\n' < "$RUNNER_TEMP/changed.z"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.rules.outputs.count != '0' && steps.files.outputs.count != '0'
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep
+        if: steps.rules.outputs.count != '0' && steps.files.outputs.count != '0'
+        run: python -m pip install --quiet "semgrep==${SEMGREP_VERSION}"
+
+      - name: Run learned reflexes
+        if: steps.rules.outputs.count != '0' && steps.files.outputs.count != '0'
+        run: |
+          xargs -0 -a "$RUNNER_TEMP/changed.z" \
+            semgrep scan --config reflexes --error --metrics=off --disable-version-check --
