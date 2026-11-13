@@ -20,6 +20,7 @@ type State = {
   rule_events: RuleEvent[];
 };
 type Rules = { files: Record<string, string>; log: string[] };
+type Ci = { available: boolean; file?: string; code?: string[]; hits?: { rule: string; kind: string; message: string; line: number }[]; ms?: number };
 type Tiger = { available: boolean; rows?: number; raw_ms?: number; cagg_ms?: number; hybrid_ms?: number; compression?: number | null; hybrid?: [string, string, string, number][] };
 
 const NONE = "-";
@@ -142,6 +143,7 @@ function Dashboard() {
   const s = usePoll<State>("/api/state", 700);
   const rules = usePoll<Rules>("/api/rules", 2000);
   const tiger = usePoll<Tiger>("/api/tiger", 4000);
+  const ci = usePoll<Ci>("/api/ci", 5000);
 
   const total = s ? s.tiers.reflex + s.tiers.jev + s.tiers.gemini : 0;
   const has = !!s && total > 0;
@@ -333,6 +335,7 @@ function Dashboard() {
             )}
           </div>
         </section>
+        {ci?.available && ci.hits && ci.hits.length > 0 && <CiPanel ci={ci} />}
       </div>
     </main>
   );
@@ -437,5 +440,29 @@ function Chart({ series }: { series: State["series"] }) {
         {series.map((p, k) => <circle key={p.i + (p.spot ? "s" : "")} cx={x(k)} cy={y(p.ms)} r={p.spot ? 2.5 : 4} className={`dot t-${p.tier} ${p.spot ? "spot" : ""}`} />)}
       </svg>
     </div>
+  );
+}
+
+function CiPanel({ ci }: { ci: Ci }) {
+  const byLine = new Map<number, string>();
+  for (const h of ci.hits!) if (!byLine.has(h.line)) byLine.set(h.line, h.kind === "swallowed_exception" ? "hides errors" : thing(h.kind));
+  const rules = new Set(ci.hits!.map((h) => h.rule)).size;
+  return (
+    <section className="panel ci">
+      <div className="ci-head">
+        <div>
+          <h2>Its habits, guarding new code</h2>
+          <p className="dim">The habits it learned run on a new AI-written file with no AI involved, like a check on every pull request.</p>
+        </div>
+        <div className="ci-verdict">
+          <b>Blocked</b>
+          <span>{ci.hits!.length} problems, {rules} habits, {fmtMs(ci.ms)}</span>
+        </div>
+      </div>
+      <pre className="ci-code">{ci.code!.map((l, k) => {
+        const tag = byLine.get(k + 1);
+        return <div key={k} className={tag ? "ci-row ci-hit" : "ci-row"}><span className="ci-ln">{k + 1}</span>{l || " "}{tag && <span className="ci-tag">{tag}</span>}</div>;
+      })}</pre>
+    </section>
   );
 }
