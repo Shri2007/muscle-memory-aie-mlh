@@ -1,37 +1,55 @@
 [
   {
-    "code": "# Calculate the tax\ntax = round_half_up(cents * RATES[region])",
+    "code": "# Calculate the tax\ntax = round_half_up(cents * RATES[region])\nreturn cents + tax",
     "plain": "This comment describes the calculation directly below it.",
     "answer": "junk",
     "why": "The comment repeats what the code already says.",
-    "jev_ms": 66.352
+    "jev_ms": 66.352,
+    "highlight": [
+      1
+    ]
   },
   {
-    "code": "print(\"parsed\", day)\nreturn day, parts[1], parse_amount(parts[2])",
+    "code": "    day = date.today()\nprint(\"parsed\", day)\nreturn day, parts[1], parse_amount(parts[2])",
     "plain": "A CSV reader prints the date every time it reads a row.",
     "answer": "junk",
     "why": "The reader should return data without leftover debug output.",
-    "jev_ms": 168.446
+    "jev_ms": 168.446,
+    "highlight": [
+      2
+    ]
   },
   {
     "code": "    day = date.fromisoformat(parts[0])\nexcept Exception:\n    day = date.today()",
     "plain": "A bad date silently becomes today instead of reporting an error.",
     "answer": "junk",
     "why": "Using today hides invalid data and changes its meaning.",
-    "jev_ms": 127.266
+    "jev_ms": 127.266,
+    "highlight": [
+      2,
+      3
+    ]
   },
   {
-    "code": "if region not in RATES:\n    raise ValueError(f\"unknown region: {region}\")",
+    "code": "if region not in RATES:\n    raise ValueError(f\"unknown region: {region}\")\ntry:",
     "plain": "The tax calculator must reject unknown regions with ValueError.",
     "answer": "needed",
     "why": "This check reports the error required by the ticket.",
-    "jev_ms": 524.837
+    "jev_ms": 524.837,
+    "highlight": [
+      1,
+      2
+    ]
   },
   {
     "code": "try:\n    return parse_amount(text)\nexcept Exception:\n    return None",
     "plain": "This safe parser must return None when an amount cannot be read.",
     "answer": "needed",
     "why": "The ticket explicitly asks for this fallback.",
-    "jev_ms": 70
+    "jev_ms": 70,
+    "highlight": [
+      3,
+      4
+    ]
   }
 ]

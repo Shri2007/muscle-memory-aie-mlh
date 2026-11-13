@@ -144,7 +144,7 @@ def room(code: str) -> dict:
 
 
 def begin_round(g: dict) -> None:
-    g.update(phase="question", answers={}, deadline=time.monotonic() + 10)
+    g.update(phase="question", answers={}, deadline=time.monotonic() + 8)
 
 
 @app.post("/api/game/host")
@@ -208,12 +208,12 @@ def game_answer(code: str, body: GameAnswer) -> dict:
             raise HTTPException(403, "Join this game first.")
         if g["phase"] != "question" or body.player_id in g["answers"]:
             raise HTTPException(409, "Your answer is locked or time is up.")
-        elapsed = max(0, 10 - (g["deadline"] - time.monotonic()))
-        points = 500 + round(500 * (1 - elapsed / 10)) if body.choice == GAME_ROUNDS[g["index"]]["answer"] else 0
+        elapsed = max(0, 8 - (g["deadline"] - time.monotonic()))
+        points = 500 + round(500 * (1 - elapsed / 8)) if body.choice == GAME_ROUNDS[g["index"]]["answer"] else 0
         g["answers"][body.player_id] = dict(choice=body.choice, seconds=round(elapsed, 2), points=points)
         g["players"][body.player_id]["score"] += points
         room(code)
-        return dict(ok=True)
+        return dict(ok=True, seconds=round(elapsed, 2))
 
 
 @app.get("/api/game/{code}")
@@ -223,24 +223,33 @@ def game_state(code: str, player_id: str = "") -> dict:
         reveal = g["phase"] == "reveal"
         ranked = sorted(g["players"].items(), key=lambda item: -item[1]["score"])
         ranking = [dict(name=p["name"], score=p["score"], rank=i+1) for i, (_, p) in enumerate(ranked)]
-        own = next((dict(score=p["score"], rank=i+1) for i, (pid, p) in enumerate(ranked) if pid == player_id), None)
+        own = next((dict(name=p["name"], score=p["score"], rank=i+1) for i, (pid, p) in enumerate(ranked) if pid == player_id), None)
         vote = g["answers"].get(player_id)
         if own is not None:
             own["answered"] = vote is not None
+            own["seconds"] = vote["seconds"] if vote else None
             if reveal:
                 own.update(vote or dict(choice=None, seconds=None, points=0))
         r = GAME_ROUNDS[g["index"]]
         result = dict(phase=g["phase"], players=[dict(name=p["name"]) for p in g["players"].values()],
-                      round=g["index"]+1, total=len(GAME_ROUNDS),
+                      round=g["index"]+1, total=len(GAME_ROUNDS), answered=len(g["answers"]), duration=8,
                       seconds_left=max(0, g["deadline"]-time.monotonic()) if g["phase"] == "question" else 0,
                       top5=ranking[:5] if g["phase"] in ("reveal", "final") else [], me=own)
         if g["phase"] in ("question", "reveal"):
-            result.update(code=r["code"], plain=r["plain"])
+            result.update(code=r["code"], plain=r["plain"], highlight=r.get("highlight", []))
         if reveal:
             n = len(g["answers"])
             result.update(answer=r["answer"], why=r["why"], jev_ms=r["jev_ms"],
                           votes={c: round(100 * sum(a["choice"] == c for a in g["answers"].values()) / n) if n else 0 for c in ("junk", "needed")},
                           fastest=min((a["seconds"] for a in g["answers"].values()), default=None))
+        if reveal:
+            result["racers"] = [
+                dict(name=p["name"], seconds=g["answers"].get(pid, {}).get("seconds"),
+                     correct=g["answers"].get(pid, {}).get("choice") == r["answer"])
+                for pid, p in g["players"].items()
+            ]
+        if g["phase"] == "final":
+            result["jev_total_ms"] = sum(r["jev_ms"] for r in GAME_ROUNDS)
         return result
 
 
