@@ -1,0 +1,18 @@
+[project]
+name = "muscle-memory"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "typesafe-sdk",
+  "google-genai",
+  "psycopg[binary]",
+  "pgvector",
+  "sentry-sdk",
+  "unidiff",
+  "python-dotenv",
+  "pytest",
+  "pyyaml",
+  "numpy",
+  "fastapi",
+  "uvicorn",
+]

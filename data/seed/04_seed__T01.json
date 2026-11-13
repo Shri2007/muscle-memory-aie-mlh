@@ -1,0 +1,7 @@
+{
+ "agent": "seed",
+ "ticket": "T01",
+ "files": {
+  "ledger/discount.py": "from ledger.money import round_half_up\n\n\ndef apply_discount(total_cents: int, percent: float) -> int:\n    # Validate the percent\n    if not 0 <= percent <= 100:\n        raise ValueError(\"percent must be 0-100\")\n    try:\n        # Compute the discounted total\n        return round_half_up(total_cents * (100 - percent) / 100)\n    except Exception:\n        return total_cents\n"
+ }
+}

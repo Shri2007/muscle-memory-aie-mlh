@@ -1,0 +1,7 @@
+{
+ "agent": "seed",
+ "ticket": "T04",
+ "files": {
+  "ledger/rates.py": "import json\n\n\ndef load_rates(path: str) -> dict[str, float]:\n    # Open the file\n    try:\n        with open(path) as f:\n            # Load the JSON\n            return json.load(f)\n    except Exception:\n        return {}\n"
+ }
+}

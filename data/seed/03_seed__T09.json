@@ -1,0 +1,7 @@
+{
+ "agent": "seed",
+ "ticket": "T09",
+ "files": {
+  "ledger/csvline.py": "from datetime import date\n\nfrom ledger.money import parse_amount\n\n\ndef parse_line(line: str) -> tuple[date, str, int]:\n    # Split the line on commas\n    parts = line.split(\",\")\n    if len(parts) != 3:\n        raise ValueError(f\"expected 3 fields: {line!r}\")\n    try:\n        # Parse the date\n        day = date.fromisoformat(parts[0])\n    except Exception:\n        day = date.today()\n    print(\"parsed\", day)\n    return day, parts[1], parse_amount(parts[2])\n"
+ }
+}

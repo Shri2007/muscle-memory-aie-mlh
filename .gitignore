@@ -1,0 +1,9 @@
+.env
+__pycache__/
+.venv/
+node_modules/
+dist/
+data/*
+!data/.gitkeep
+!data/seed/
+.DS_Store
