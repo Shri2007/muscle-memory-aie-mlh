@@ -13,9 +13,10 @@ app = FastAPI()
 
 
 def events() -> list[dict]:
-    if not config.EVENTS.exists():
+    src = config.EVENTS if config.EVENTS.exists() else config.DEMO_EVENTS
+    if not src.exists():
         return []
-    return [json.loads(line) for line in config.EVENTS.read_text().splitlines() if line.strip()]
+    return [json.loads(line) for line in src.read_text().splitlines() if line.strip()]
 
 
 @app.get("/api/state")

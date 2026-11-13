@@ -1,0 +1,22 @@
+name: muscle-memory
+region: sfo
+services:
+  - name: factory
+    github:
+      repo: Shri2007/muscle-memory-aie-mlh
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    routes:
+      - path: /
+    health_check:
+      http_path: /api/state
+    envs:
+      # The deployed dashboard only reads data; it never calls Jev or Gemini, so no model keys here.
+      - { key: DATABASE_URL, type: SECRET, scope: RUN_TIME }
+      - { key: SENTRY_DSN, type: SECRET, scope: RUN_TIME }
+      - { key: VITE_SENTRY_DSN, type: SECRET, scope: BUILD_TIME }

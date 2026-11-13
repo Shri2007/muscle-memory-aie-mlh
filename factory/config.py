@@ -15,6 +15,8 @@ TARGET = ROOT / "target"
 RULES = ROOT / "rules"
 RUN_DIR = ROOT / "data" / "run"
 EVENTS = RUN_DIR / "events.jsonl"
+# Snapshot of a real run, shown when no live run exists (e.g. on the deployed dashboard).
+DEMO_EVENTS = ROOT / "data" / "demo" / "events.jsonl"
 
 JEV_MODEL = env("JEV_MODEL", "jev-latest")
 S2_MODEL = env("GEMINI_S2_MODEL")

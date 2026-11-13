@@ -6,4 +6,5 @@ dist/
 data/*
 !data/.gitkeep
 !data/seed/
+!data/demo/
 .DS_Store
