@@ -125,6 +125,19 @@ export default function App() {
   return <Dashboard />;
 }
 
+function barsOf(series: State["series"]) {
+  const rows = series.filter((p) => !p.spot);
+  if (rows.length <= 24) return rows;
+  return Array.from({ length: 24 }, (_, i) => rows[Math.round((i * (rows.length - 1)) / 23)]);
+}
+
+function barHeight(ms: number, rows: State["series"]) {
+  const lo = Math.log10(Math.max(Math.min(...rows.map((p) => p.ms)), 0.01));
+  const hi = Math.log10(Math.max(...rows.map((p) => p.ms), 0.02));
+  const t = hi === lo ? 1 : (Math.log10(Math.max(ms, 0.01)) - lo) / (hi - lo);
+  return 16 + t * 84;
+}
+
 function Dashboard() {
   const s = usePoll<State>("/api/state", 700);
   const rules = usePoll<Rules>("/api/rules", 2000);
@@ -137,152 +150,191 @@ function Dashboard() {
   const avg = Object.fromEntries(STEPS.map((st) => [st.id, s ? stepAvg(s.series, st.id) : { ms: null, cost: null }])) as Record<Tier, { ms: number | null; cost: number | null }>;
   const jump1 = times(avg.gemini.ms, avg.jev.ms);
   const jump2 = times(avg.jev.ms, avg.reflex.ms);
+  const bars = s ? barsOf(s.series) : [];
+  const spots = s ? s.series.filter((p) => p.spot).length : 0;
 
   return (
-    <div className="page">
-      <header className="hero">
-        <div className="hero-text">
-          <h1>Watch an AI code cleaner learn to work <em>without</em> AI.</h1>
-          <p className="sub">
-            AI agents write sloppy code. A fast AI makes most cleanup calls, an expert AI takes the hard ones, and proven calls become free habits.
-          </p>
-        </div>
-        <a href="#host">Host a game</a>
-        <Status s={s} has={has} />
-      </header>
+    <main className="viewport" aria-label="Muscle Memory">
+      <div className="scene">
+        <header className="hero">
+          <div className="hero-text">
+            <p className="brand">Muscle Memory</p>
+            <h1>Watch an AI code cleaner learn to work <em>without</em> AI.</h1>
+            <p className="sub">
+              AI agents write sloppy code. A fast AI makes most cleanup calls, an expert AI takes the hard ones, and proven calls become free habits.
+            </p>
+          </div>
+          <div className="hero-side">
+            <a className="host" href="#host">Host a game</a>
+            <Status s={s} has={has} />
+          </div>
+        </header>
 
-      <section className="ladder" aria-label="How a decision gets faster">
-        {STEPS.map((st, k) => (
-          <div key={st.id} className="ladder-cell">
-            <div className={`rung t-${st.id} ${latest?.tier === st.id && s?.running ? "active" : ""}`}>
-              <div className="rung-name">{st.name}</div>
-              <div className="rung-who">{st.who}</div>
-              <div className="rung-time">{st.id === "reflex" && avg.reflex.ms != null ? "instant" : fmtSec(avg[st.id].ms)}</div>
-              <div className="rung-meta">
-                <span>{st.id === "reflex" && avg.reflex.ms != null ? `${fmtSec(avg.reflex.ms)} per call` : "per decision"}</span>
-                <span>{fmtCost(avg[st.id].cost)}{avg[st.id].cost ? " each" : ""}</span>
+        <section className="cards" aria-label="How a decision gets faster">
+          <article className={`card t-gemini ${latest?.tier === "gemini" && s?.running ? "active" : ""}`}>
+            <div className="panel" aria-label="Decision speed chart">
+              <div className="timeline"><span>first</span><i></i><span>latest</span></div>
+              <div className="bars" aria-hidden="true">
+                {bars.map((p, i) => (
+                  <i key={p.i + "-" + i} className={`bar t-${p.tier}`} style={{ ["--h" as string]: `${barHeight(p.ms, bars)}%` }} />
+                ))}
               </div>
-              <p className="rung-does">{st.does}</p>
-              <div className="rung-count"><b>{s ? s.tiers[st.id] : NONE}</b> decisions made here{st.id === "gemini" && s ? `, ${s.series.filter((p) => p.spot).length} double-checks` : ""}</div>
+              <div className="value-chip">{s ? String(total) : NONE}</div>
+              <div className="axis"><span className="c-gemini">Expert</span><span className="c-jev">Gut</span><span className="c-reflex">Habit</span></div>
             </div>
-            {k < 2 && (
-              <div className="jump" aria-hidden>
-                <span className="arrow">→</span>
-                <span className="jump-x">{k === 0 ? (jump1 ? `${jump1}× faster` : "faster") : (jump2 ? "no AI at all" : "no AI")}</span>
+            <div className="card-copy">
+              <h2>Expert AI</h2>
+              <p>Gemini. {fmtSec(avg.gemini.ms)} per decision, {fmtCost(avg.gemini.cost)}{avg.gemini.cost ? " each" : ""}. {s ? s.tiers.gemini : NONE} calls here{spots ? `, ${spots} double-checks` : ""}.</p>
+              <span className="corner-icon"><i className="spark"></i></span>
+            </div>
+          </article>
+
+          <article className={`card t-jev ${latest?.tier === "jev" && s?.running ? "active" : ""}`}>
+            <div className="panel">
+              <div className="assistant-head"><span className="badge"><i className="spark"></i></span><span>Gut instinct</span></div>
+              <p className="question">{latest ? `${latest.verdict === "cut" ? "Removed" : "Kept"} ${latest.verdict === "keep" ? (KEPT[latest.kind] ?? thing(latest.kind)) : thing(latest.kind)}` : "How should this code be cleaned?"}</p>
+              <div className="prompt">{latest ? dedent(latest.snippet).slice(0, 3).join("\n") : "Each decision shows up here once a run starts, with the code it was about."}</div>
+              <div className="automate">
+                <span className="automate-label">{latest ? (latest.tier === "reflex" ? "instant" : fmtSec(latest.latency_ms)) : "Waiting"}</span>
+                <span className="pill-mark">{latest ? STEP_NAME[latest.tier] : "Jev"}</span>
               </div>
+            </div>
+            <div className="card-copy">
+              <h2>Gut instinct</h2>
+              <p>Jev. {fmtSec(avg.jev.ms)} per decision, {fmtCost(avg.jev.cost)}{avg.jev.cost ? " each" : ""}. {s ? s.tiers.jev : NONE} calls here.{jump1 ? ` ${jump1}× faster than the expert.` : ""}</p>
+              <span className="corner-icon"><i className="flow-icon"></i></span>
+            </div>
+          </article>
+
+          <article className={`card t-reflex ${latest?.tier === "reflex" && s?.running ? "active" : ""}`}>
+            <div className="panel">
+              <div className="metric">
+                <div className="metric-label">Time per habit call</div>
+                <div className="metric-row">
+                  <strong>{avg.reflex.ms != null ? "instant" : NONE}</strong>
+                  <span>{jump2 ? "no AI at all" : avg.reflex.ms != null ? `${fmtSec(avg.reflex.ms)} each` : "after 5 proven calls"}</span>
+                </div>
+              </div>
+              <div className="tag action">{s ? `${s.tiers.reflex} habit calls` : "Habit calls"}</div>
+              <div className="tag confidence">{has ? `Hidden tests ${s!.holdout.before} → ${s!.holdout.after}` : "Hidden tests"}</div>
+              <div className="tag path">{has && s!.lines.before ? `${pct(s!.lines.after, s!.lines.before)}% less code` : "Less code"}</div>
+            </div>
+            <div className="card-copy">
+              <h2>Habit</h2>
+              <p>{fmtCost(avg.reflex.cost)}. {s ? s.tiers.reflex : NONE} decisions made here. Proven right 5 times, then no AI is needed.</p>
+              <span className="corner-icon"><i className="speed"></i></span>
+            </div>
+          </article>
+        </section>
+
+        <section className="board">
+          <div className="sheet feed">
+            <h2>{s?.running ? "Happening now" : "What it just did"}</h2>
+            {!has ? (
+              <div className="idle">
+                <p className="idle-h">Start a run to watch it learn.</p>
+                <p className="dim">Each decision shows up here in plain English, with the code it was about.</p>
+                <code>uv run python -m factory.run --prs data/seed --reset --pace 0.6</code>
+                {!s && <p className="dim">Waiting for the server on port 8000.</p>}
+              </div>
+            ) : (
+              <ol className="items">
+                {s!.recent.map((d) => <Item key={d.i} d={d} />)}
+              </ol>
             )}
           </div>
-        ))}
-      </section>
 
-      <section className="main">
-        <div className="panel feed">
-          <h2>{s?.running ? "Happening now" : "What it just did"}</h2>
-          {!has ? (
-            <div className="idle">
-              <p className="idle-h">Start a run to watch it learn.</p>
-              <p className="dim">Each decision shows up here in plain English, with the code it was about.</p>
-              <code>uv run python -m factory.run --prs data/seed --reset --pace 0.6</code>
-              {!s && <p className="dim">Waiting for the server on port 8000.</p>}
+          <div className="side">
+            <div className="sheet">
+              <h2>Just learned</h2>
+              {events.length === 0 ? (
+                <p className="dim">No habits yet. One forms after 5 proven-right calls of the same kind.</p>
+              ) : (
+                <>
+                  <Lesson key={events[0].id + events[0].type} e={events[0]} big />
+                  {events.slice(1).map((e) => <Lesson key={e.id + e.type} e={e} />)}
+                </>
+              )}
             </div>
-          ) : (
-            <ol className="items">
-              {s!.recent.slice(0, 6).map((d) => <Item key={d.i} d={d} />)}
-            </ol>
-          )}
-        </div>
+            <div className="sheet">
+              <h2>Did it break anything?</h2>
+              <div className="results">
+                <Result n={s ? String(s.unsafe_cuts) : NONE} label="broken changes shipped" tone={s ? (s.unsafe_cuts === 0 ? "good" : "bad") : ""} />
+                <Result n={s?.caught_by_tests != null ? String(s.caught_by_tests) : NONE} label="bad cuts caught and undone" />
+                <Result n={has ? `${s!.holdout.before} → ${s!.holdout.after}` : NONE} label="hidden-test failures" tone={has && s!.holdout.after < s!.holdout.before ? "good" : ""} />
+                <Result n={has && s!.lines.before ? `${pct(s!.lines.after, s!.lines.before)}%` : NONE} label="less code" />
+              </div>
+              <p className="note">Every cut is checked by running the real tests plus hidden tests the AI never sees. Anything that breaks is undone.</p>
+            </div>
+          </div>
+        </section>
 
-        <div className="side">
-          <div className="panel">
-            <h2>Just learned</h2>
-            {events.length === 0 ? (
-              <p className="dim">No habits yet. One forms after 5 proven-right calls of the same kind.</p>
-            ) : (
+        <section className="stack">
+          <div className="sheet">
+            <h2>Speed of every decision</h2>
+            {s ? <Chart series={s.series} /> : <p className="dim">{NONE}</p>}
+            <div className="kpi-row">
+              <Kpi label="decisions" value={s ? String(total) : NONE} />
+              <Kpi label="removed / kept" value={s ? `${s.cut} / ${s.kept}` : NONE} />
+              <Kpi label="total AI spend" value={s ? `$${s.cost_usd.toFixed(4)}` : NONE} />
+              <Kpi label="tokens" value={s ? s.tokens.toLocaleString() : NONE} />
+            </div>
+          </div>
+
+          <div className="sheet">
+            <h2>The habits as rule files, with their git history</h2>
+            {(!rules || Object.keys(rules.files).length === 0) && <p className="dim">No rule files yet.</p>}
+            <div className="rulefiles">
+              {rules && Object.entries(rules.files).map(([name, text]) => (
+                <pre key={name} className={text.includes("active: false") ? "inactive" : ""}><b>{name}</b>{"\n"}{text}</pre>
+              ))}
+            </div>
+            {rules && rules.log.length > 0 && <><h3>git log -- rules/</h3><pre className="log">{rules.log.join("\n")}</pre></>}
+          </div>
+
+          <div className="sheet">
+            <h2>Which coding agent wrote the sloppy code</h2>
+            <div className="tables">
+              <table>
+                <thead><tr><th>coding agent</th><th>changes</th><th>lines</th><th>removed</th></tr></thead>
+                <tbody>
+                  {s && Object.entries(s.agents).map(([a, v]) => (
+                    <tr key={a}><td>{a === "seed" ? "seed (hand-written)" : a}</td><td>{v.prs}</td><td>{v.before} → {v.after}</td><td>{pct(v.after, v.before)}%</td></tr>
+                  ))}
+                </tbody>
+              </table>
+              <table>
+                <thead><tr><th>what it found</th><th>removed</th><th>kept</th></tr></thead>
+                <tbody>
+                  {s && Object.entries(s.kinds).map(([k, v]) => <tr key={k}><td>{thing(k)}</td><td>{v.cut}</td><td>{v.keep}</td></tr>)}
+                </tbody>
+              </table>
+            </div>
+            {s && <p className="dim">{s.prs.done} code changes cleaned{s.prs.rejected ? `, ${s.prs.rejected} rejected because their own tests failed` : ""}.</p>}
+          </div>
+
+          <div className="sheet">
+            <h2>Where decisions are stored (Tiger Data)</h2>
+            {!tiger?.available ? <p className="dim">Set DATABASE_URL to show live Tiger Data stats.</p> : (
               <>
-                <Lesson key={events[0].id + events[0].type} e={events[0]} big />
-                {events.slice(1, 3).map((e) => <Lesson key={e.id + e.type} e={e} />)}
+                <div className="kpi-row">
+                  <Kpi label="decisions stored" value={tiger.rows == null ? NONE : String(tiger.rows)} />
+                  <Kpi label="raw query" value={fmtMs(tiger.raw_ms)} />
+                  <Kpi label="continuous aggregate" value={fmtMs(tiger.cagg_ms)} />
+                  <Kpi label="compression" value={tiger.compression ? `${tiger.compression.toFixed(1)}×` : NONE} />
+                </div>
+                <h3>Most similar past decisions to the newest one (pgvector + time series, {fmtMs(tiger.hybrid_ms)})</h3>
+                <table><tbody>
+                  {tiger.hybrid?.map((r, i) => (
+                    <tr key={i}><td>{thing(r[0])}</td><td className={`c-${r[1]}`}>{STEP_NAME[r[1]] ?? r[1]}</td><td>{r[2] === "cut" ? "removed" : "kept"}</td><td>{r[3]}</td></tr>
+                  ))}
+                </tbody></table>
               </>
             )}
           </div>
-
-          <div className="panel">
-            <h2>Did it break anything?</h2>
-            <div className="results">
-              <Result n={s ? String(s.unsafe_cuts) : NONE} label="broken changes shipped" tone={s ? (s.unsafe_cuts === 0 ? "good" : "bad") : ""} />
-              <Result n={s?.caught_by_tests != null ? String(s.caught_by_tests) : NONE} label="bad cuts caught and undone" />
-              <Result n={has ? `${s!.holdout.before} → ${s!.holdout.after}` : NONE} label="hidden-test failures" tone={has && s!.holdout.after < s!.holdout.before ? "good" : ""} />
-              <Result n={has && s!.lines.before ? `${pct(s!.lines.after, s!.lines.before)}%` : NONE} label="less code" />
-            </div>
-            <p className="note">Every cut is checked by running the real tests plus hidden tests the AI never sees. Anything that breaks is undone.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="details">
-        <details>
-          <summary>Speed of every decision</summary>
-          {s ? <Chart series={s.series} /> : <p className="dim">{NONE}</p>}
-          <div className="kpi-row">
-            <Kpi label="decisions" value={s ? String(total) : NONE} />
-            <Kpi label="removed / kept" value={s ? `${s.cut} / ${s.kept}` : NONE} />
-            <Kpi label="total AI spend" value={s ? `$${s.cost_usd.toFixed(4)}` : NONE} />
-            <Kpi label="tokens" value={s ? s.tokens.toLocaleString() : NONE} />
-          </div>
-        </details>
-
-        <details>
-          <summary>The habits as rule files, with their git history</summary>
-          {(!rules || Object.keys(rules.files).length === 0) && <p className="dim">No rule files yet.</p>}
-          <div className="rulefiles">
-            {rules && Object.entries(rules.files).map(([name, text]) => (
-              <pre key={name} className={text.includes("active: false") ? "inactive" : ""}><b>{name}</b>{"\n"}{text}</pre>
-            ))}
-          </div>
-          {rules && rules.log.length > 0 && <><h3>git log -- rules/</h3><pre className="log">{rules.log.join("\n")}</pre></>}
-        </details>
-
-        <details>
-          <summary>Which coding agent wrote the sloppy code</summary>
-          <div className="tables">
-            <table>
-              <thead><tr><th>coding agent</th><th>changes</th><th>lines</th><th>removed</th></tr></thead>
-              <tbody>
-                {s && Object.entries(s.agents).map(([a, v]) => (
-                  <tr key={a}><td>{a === "seed" ? "seed (hand-written)" : a}</td><td>{v.prs}</td><td>{v.before} → {v.after}</td><td>{pct(v.after, v.before)}%</td></tr>
-                ))}
-              </tbody>
-            </table>
-            <table>
-              <thead><tr><th>what it found</th><th>removed</th><th>kept</th></tr></thead>
-              <tbody>
-                {s && Object.entries(s.kinds).map(([k, v]) => <tr key={k}><td>{thing(k)}</td><td>{v.cut}</td><td>{v.keep}</td></tr>)}
-              </tbody>
-            </table>
-          </div>
-          {s && <p className="dim">{s.prs.done} code changes cleaned{s.prs.rejected ? `, ${s.prs.rejected} rejected because their own tests failed` : ""}.</p>}
-        </details>
-
-        <details>
-          <summary>Where decisions are stored (Tiger Data)</summary>
-          {!tiger?.available ? <p className="dim">Set DATABASE_URL to show live Tiger Data stats.</p> : (
-            <>
-              <div className="kpi-row">
-                <Kpi label="decisions stored" value={tiger.rows == null ? NONE : String(tiger.rows)} />
-                <Kpi label="raw query" value={fmtMs(tiger.raw_ms)} />
-                <Kpi label="continuous aggregate" value={fmtMs(tiger.cagg_ms)} />
-                <Kpi label="compression" value={tiger.compression ? `${tiger.compression.toFixed(1)}×` : NONE} />
-              </div>
-              <h3>Most similar past decisions to the newest one (pgvector + time series, {fmtMs(tiger.hybrid_ms)})</h3>
-              <table><tbody>
-                {tiger.hybrid?.map((r, i) => (
-                  <tr key={i}><td>{thing(r[0])}</td><td className={`c-${r[1]}`}>{STEP_NAME[r[1]] ?? r[1]}</td><td>{r[2] === "cut" ? "removed" : "kept"}</td><td>{r[3]}</td></tr>
-                ))}
-              </tbody></table>
-            </>
-          )}
-        </details>
-      </section>
-    </div>
+        </section>
+      </div>
+    </main>
   );
 }
 
