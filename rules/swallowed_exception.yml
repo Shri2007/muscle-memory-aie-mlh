@@ -10,6 +10,6 @@ rules:
     kind: swallowed_exception
     support: 5
     version: 1
-    active: true
+    active: false
     verdict: cut
     learned_at: '2026-11-13T20:29:14+00:00'
