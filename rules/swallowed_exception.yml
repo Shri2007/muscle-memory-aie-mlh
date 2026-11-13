@@ -1,15 +1,15 @@
 # learned by Muscle Memory from 5 verified decisions
 rules:
-- id: mm-swallowed_exception-v1
+- id: mm-swallowed_exception-v2
   languages:
   - python
   severity: WARNING
-  message: Swallowing broad exceptions with silent fallback values hides bugs and masks real failures.
-  pattern-regex: ^([ \t]*)except(?:[ \t]+(?:Exception|BaseException))?(?:[ \t]+as[ \t]+\w+)?[ \t]*:\r?\n\1[ \t]+(?:pass\b|return\b|\w+[ \t]*=[^=])[^\r\n]*(?!\r?\n\1[ \t]+\S)
+  message: Catching Exception to return or assign fake defaults hides real failures.
+  pattern-regex: \btry:[ \t]*(?:\n(?![ \t]*except\b).*)*\n[ \t]*except Exception:[ \t]*\n[ \t]*(?:return[ \t]+(?!None\b)|\w+[ \t]*=)
   metadata:
     kind: swallowed_exception
     support: 5
-    version: 1
-    active: false
+    version: 2
+    active: true
     verdict: cut
-    learned_at: '2026-11-13T20:29:14+00:00'
+    learned_at: '2026-11-13T20:29:35+00:00'
