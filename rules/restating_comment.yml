@@ -4,12 +4,12 @@ rules:
   languages:
   - python
   severity: WARNING
-  message: Restating what the next line does adds noise without explaining why.
-  pattern-regex: '^([ \t]*)# [A-Z][a-z]+(?: [A-Za-z]+){1,5}\n\1[a-z]'
+  message: Comments restating what the next line already says add noise without explaining why.
+  pattern-regex: '^[ \t]*# [A-Z][a-z]+(?: [a-zA-Z]+){1,5}[ \t]*\r?\n[ \t]*\S'
   metadata:
     kind: restating_comment
     support: 5
     version: 1
     active: true
     verdict: cut
-    learned_at: '2026-11-13T22:35:58+00:00'
+    learned_at: '2026-11-13T23:14:42+00:00'
