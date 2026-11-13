@@ -25,9 +25,9 @@ QUESTIONS = {
     },
     "restating_comment": {
         "restates": Noul(
-            instructions="Does the comment in `snippet` only repeat what the line of code below it already says?",
+            instructions="Does the comment in `snippet` merely describe the operation visibly performed by the adjacent code?",
             criteria=NoulCriteria(
-                true="Like '# add one to i' above 'i += 1': the comment adds nothing a reader of the code would not already see",
+                true="The comment paraphrases the adjacent operation or names its action without adding a reason, constraint, or domain fact",
                 false="The comment explains why, states a constraint, or describes something not obvious from the code",
             ),
         ),
@@ -41,10 +41,10 @@ QUESTIONS = {
             ),
         ),
         "function_relies": Noul(
-            instructions="Would the rest of `function` break or return a wrong result if the if-check in `snippet` were deleted?",
+            instructions="Can removing the if-check in `snippet` change the behavior of `function` for an input that reaches that check?",
             criteria=NoulCriteria(
-                true="Later code depends on the check, for example it would divide by zero or index an empty list",
-                false="Later code works the same for the inputs the check rejects, or those inputs cannot happen",
+                true="An input can reach and satisfy the check, and removing it changes the result or allows an error in later code",
+                false="The check cannot be satisfied after the preceding code has executed, or removing it leaves the result and errors unchanged",
             ),
         ),
     },

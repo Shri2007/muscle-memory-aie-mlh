@@ -1,0 +1,7 @@
+{
+ "agent": "seed",
+ "ticket": "T11",
+ "files": {
+  "ledger/safe.py": "from ledger.money import parse_amount\n\n\ndef safe_parse(text: str) -> int | None:\n    try:\n        return parse_amount(text)\n    except Exception:\n        return None\n"
+ }
+}

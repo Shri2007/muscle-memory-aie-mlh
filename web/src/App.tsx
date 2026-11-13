@@ -40,7 +40,18 @@ function usePoll<T>(url: string, ms: number): T | null {
 
 const fmtMs = (ms: number | null) =>
   ms == null ? "—" : ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : ms >= 1 ? `${ms.toFixed(0)} ms` : `${(ms * 1000).toFixed(0)} µs`;
+const fmtCost = (c: number | null) => (c == null ? "—" : `$${c.toFixed(4)}`);
 const pct = (a: number, b: number) => (b ? Math.round((1 - a / b) * 100) : 0);
+const fmtX = (n: number | null) => (n == null ? "—" : `${n >= 10 ? n.toFixed(0) : n.toFixed(1)}×`);
+
+function tierAvg(series: State["series"], tier: Tier, skipSpot: boolean) {
+  const rows = series.filter((p) => p.tier === tier && !(skipSpot && p.spot));
+  if (!rows.length) return { ms: null as number | null, cost: null as number | null };
+  return {
+    ms: rows.reduce((a, p) => a + p.ms, 0) / rows.length,
+    cost: rows.reduce((a, p) => a + p.cost, 0) / rows.length,
+  };
+}
 
 export default function App() {
   const s = usePoll<State>("/api/state", 700);
@@ -52,6 +63,11 @@ export default function App() {
   const total = s.tiers.reflex + s.tiers.jev + s.tiers.gemini;
   const newest = s.rule_events[0];
 
+  const jev = tierAvg(s.series, "jev", true);
+  const gemini = tierAvg(s.series, "gemini", false);
+  const faster = jev.ms != null && gemini.ms != null && jev.ms > 0 ? gemini.ms / jev.ms : null;
+  const cheaper = jev.cost != null && gemini.cost != null && jev.cost > 0 ? gemini.cost / jev.cost : null;
+
   return (
     <div className="page">
       <header>
@@ -62,6 +78,17 @@ export default function App() {
         <div className={`live ${s.running ? "on" : ""}`}>{s.running ? "● LIVE" : "idle"}</div>
       </header>
 
+      <section className="headlines">
+        <div className={`headline ${s.holdout.after <= s.holdout.before ? "good" : "cut"}`}>
+          <div className="headline-n">{s.holdout.before} → {s.holdout.after}</div>
+          <div className="headline-l">hidden-test failures</div>
+        </div>
+        <div className={`headline ${s.unsafe_cuts === 0 ? "good" : "cut"}`}>
+          <div className="headline-n">{s.unsafe_cuts}</div>
+          <div className="headline-l">unsafe cuts shipped</div>
+        </div>
+      </section>
+
       <section className="strip">
         <Step n={Object.keys(s.agents).length || "—"} label="coding agents" />
         <Arrow />
@@ -71,7 +98,6 @@ export default function App() {
         <Step n={s.kept} label="kept" />
         <Arrow />
         <Step n={`${pct(s.lines.after, s.lines.before)}%`} label={`less code · ${s.lines.before}→${s.lines.after} lines`} accent="good" />
-        <Step n={`${s.holdout.before}→${s.holdout.after}`} label="hidden-test failures" accent={s.holdout.after <= s.holdout.before ? "good" : "cut"} />
       </section>
 
       <section className="hero">
@@ -91,7 +117,30 @@ export default function App() {
         <div className="kpis">
           <Kpi label="spend" value={`$${s.cost_usd.toFixed(4)}`} />
           <Kpi label="tokens" value={s.tokens.toLocaleString()} />
-          <Kpi label="unsafe cuts shipped" value={String(s.unsafe_cuts)} good={s.unsafe_cuts === 0} />
+        </div>
+      </section>
+
+      <section className="s1s2">
+        <h2>System 1 vs System 2</h2>
+        <div className="s1s2-grid">
+          <div className="s1s2-col c-jev">
+            <div className="s1s2-name">System 1 · Jev</div>
+            <div className="s1s2-n">{fmtMs(jev.ms)}</div>
+            <div className="s1s2-l">avg latency</div>
+            <div className="s1s2-n sm">{fmtCost(jev.cost)}</div>
+            <div className="s1s2-l">avg cost / decision</div>
+          </div>
+          <div className="s1s2-col c-gemini">
+            <div className="s1s2-name">System 2 · Gemini</div>
+            <div className="s1s2-n">{fmtMs(gemini.ms)}</div>
+            <div className="s1s2-l">avg latency</div>
+            <div className="s1s2-n sm">{fmtCost(gemini.cost)}</div>
+            <div className="s1s2-l">avg cost / decision</div>
+          </div>
+          <div className="s1s2-punch">
+            Jev is <b className="c-jev">{fmtX(faster)}</b> faster,{" "}
+            <b className="c-jev">{fmtX(cheaper)}</b> cheaper.
+          </div>
         </div>
       </section>
 

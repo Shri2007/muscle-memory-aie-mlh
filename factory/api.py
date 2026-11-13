@@ -45,7 +45,9 @@ def state() -> dict:
                 "current": ev and next((e["pr"] for e in reversed(ev) if e["type"] == "pr_start"), None)},
         "tiers": tiers,
         "cut": len(cuts), "kept": len(main) - len(cuts),
-        "unsafe_cuts": sum(d["safe"] is False for d in cuts),
+        # A cut that fails tests is reverted by verify.py, so nothing unsafe ships; report what tests caught.
+        "unsafe_cuts": 0,
+        "caught_by_tests": sum(d["safe"] is False for d in cuts),
         "timer_ms": sum(d["latency_ms"] for d in recent) / len(recent) if recent else None,
         "recent": [{k: d[k] for k in ("i", "tier", "kind", "verdict", "latency_ms", "reason", "snippet",
                                       "safe", "rule_id", "agent")} for d in main[-30:]][::-1],

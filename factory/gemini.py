@@ -29,15 +29,27 @@ class RuleDraft(BaseModel):
     message: str
 
 
+def _retry(fn, waits=(3, 8, 20, 40)):
+    """Free-tier 429 (quota/RPM) and 503 (busy) are transient: back off and retry, then raise."""
+    for w in (*waits, None):
+        try:
+            return fn()
+        except Exception as e:
+            msg = str(e)
+            if w is None or "PerDay" in msg or not any(c in msg for c in ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE")):
+                raise  # daily quota won't recover by waiting
+            time.sleep(w)
+
+
 def _call(prompt: str, schema: type[BaseModel], name: str):
     if not config.S2_MODEL:
         raise RuntimeError("GEMINI_S2_MODEL is empty in .env")
     with sentry_sdk.start_span(op="gen_ai.chat", name=name) as span:
         t0 = time.perf_counter()
-        r = client().models.generate_content(
+        r = _retry(lambda: client().models.generate_content(
             model=config.S2_MODEL, contents=prompt,
             config=types.GenerateContentConfig(response_mime_type="application/json", response_schema=schema),
-        )
+        ))
         latency = (time.perf_counter() - t0) * 1000
         u = r.usage_metadata
         tin = (u.prompt_token_count or 0) if u else 0
@@ -95,6 +107,6 @@ message: one blunt sentence explaining why this pattern is slop, under 15 words.
 def embed(text: str) -> list[float] | None:
     if not config.EMBED_MODEL:
         return None
-    r = client().models.embed_content(model=config.EMBED_MODEL, contents=text,
-                                      config=types.EmbedContentConfig(output_dimensionality=768))
+    r = _retry(lambda: client().models.embed_content(model=config.EMBED_MODEL, contents=text,
+                                      config=types.EmbedContentConfig(output_dimensionality=768)))
     return list(r.embeddings[0].values)

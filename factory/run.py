@@ -37,7 +37,12 @@ class Factory:
         except Exception as e:  # a failed call is an error, never a verdict: log it and escalate
             sentry_sdk.capture_exception(e)
             self.store.event("error", tier="jev", error=f"{type(e).__name__}: {e}"[:300])
-        g = gemini.decide(c, ticket)
+        try:
+            g = gemini.decide(c, ticket)
+        except Exception as e:  # System 2 unavailable: skip this candidate, never invent a verdict
+            sentry_sdk.capture_exception(e)
+            self.store.event("error", tier="gemini", kind=c.kind, error=f"{type(e).__name__}: {e}"[:300])
+            return None
         return {"tier": "gemini", "rule_id": None, **g}
 
     # ---- one PR -------------------------------------------------------------
@@ -82,9 +87,15 @@ class Factory:
             fixed = apply_fix(src, c)
             if fixed is None:
                 continue
-            emb = gemini.embed(c.snippet) if config.EMBED_MODEL else None
-            hunk_id = self.store.hunk(pr_id, rel, c.kind, c.snippet, emb)
+            try:
+                emb = gemini.embed(c.snippet) if config.EMBED_MODEL else None
+            except Exception as e:
+                self.store.event("error", tier="embed", error=f"{type(e).__name__}: {e}"[:300])
+                emb = None
             d = self.decide(c, ticket, emb)
+            if d is None:
+                continue
+            hunk_id = self.store.hunk(pr_id, rel, c.kind, c.snippet, emb)
 
             ws.write(rel, fixed)
             public_ok, h = ws.run()
@@ -101,9 +112,12 @@ class Factory:
             if d["tier"] == "reflex" and not safe:
                 self.demote(d["rule_id"], c)
             elif d["tier"] != "gemini" and random.random() < config.SPOT_CHECK_RATE:
-                g = gemini.decide(c, ticket)
-                self.record({"tier": "gemini", "rule_id": None, **g}, c, name, agent, hunk_id, safe,
-                            g["verdict"] == d["verdict"], spot=True)
+                try:
+                    g = gemini.decide(c, ticket)
+                    self.record({"tier": "gemini", "rule_id": None, **g}, c, name, agent, hunk_id, safe,
+                                g["verdict"] == d["verdict"], spot=True)
+                except Exception as e:
+                    self.store.event("error", tier="gemini_spot", error=f"{type(e).__name__}: {e}"[:300])
             self.maybe_learn(c.kind)
             time.sleep(self.pace)
 
@@ -123,7 +137,11 @@ class Factory:
         if len(pos) < config.RULE_MIN_SUPPORT or len(pos) <= self.attempts.get(kind, 0):
             return  # need more evidence; retry only after a new CUT example arrives
         self.attempts[kind] = len(pos)
-        draft = gemini.write_rule(kind, pos, neg)
+        try:
+            draft = gemini.write_rule(kind, pos, neg)
+        except Exception as e:
+            self.store.event("error", tier="rule_writer", kind=kind, error=f"{type(e).__name__}: {e}"[:300])
+            return
         ok, why = reflex.validate(draft["regex"], pos, neg)
         self.store.event("rule_attempt", kind=kind, regex=draft["regex"], ok=ok, why=why,
                          latency_ms=draft["latency_ms"], cost_usd=draft["cost_usd"])

@@ -1,0 +1,38 @@
+---
+description: Muscle Memory dashboard (web/). Projector-first React UI for a 3-minute hackathon demo.
+globs: web/**
+alwaysApply: false
+---
+
+# Frontend: Muscle Memory dashboard
+
+Shown on a projector and glanced at by judges for ~10 seconds at a table. Every change must make the
+demo easier to read at a glance. If it doesn't, don't make it.
+
+## Scope
+- Edit only `web/`. Never touch `factory/`, `.env`, or commit.
+- Data contract is fixed: `GET /api/state` (polled 700 ms), `/api/rules` (2 s), `/api/tiger` (4 s).
+  Types live at the top of `web/src/App.tsx`. Compute anything new client-side from those fields.
+- No new dependencies unless unavoidable. No chart library: charts are hand-written SVG.
+- Done = `npm run build` passes.
+
+## What the screen must say in 10 seconds
+1. Time per decision is falling (big timer: seconds → ms → µs).
+2. Decisions move lanes: System 2 (Gemini) → System 1 (Jev) → Reflex (learned rule).
+3. A new rule was just learned (banner) or demoted (red banner).
+4. It's safe: "unsafe cuts shipped: 0" and hidden-test failures X → Y.
+
+## Visual rules
+- Tier colors are fixed tokens in `index.css`: `--gemini` violet, `--jev` sky, `--reflex` green,
+  `--cut` red. Use them everywhere a tier appears; never introduce another color for a tier.
+- Readable from 5 m at 1920×1080: headline numbers ≥ 48px, labels ≥ 14px, contrast ≥ 4.5:1.
+- Monospace (JetBrains Mono) for numbers and code; Inter for text. Use `font-variant-numeric: tabular-nums`
+  on changing numbers so they don't jitter.
+- Motion only to signal change (a card arriving, a rule being born). ≤ 400 ms, ease-out, and respect
+  `prefers-reduced-motion`.
+- Empty states say what to run next, never a blank panel.
+- Must still work at 375 px width (single column) without horizontal scroll.
+
+## Don't
+- Don't hide real numbers or round them into marketing ("100% safe"). Show the measured value.
+- Don't add fake/sample data to the UI. If a field is missing, show "—".
