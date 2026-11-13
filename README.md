@@ -4,9 +4,7 @@
 
 AIE x MLH Hackathon @ Code Summit · Bright Data, SF · Nov 13, 2026
 
-> **Live dashboard:** https://muscle-memory-mjivi.ondigitalocean.app (snapshot of a real run; hosted on DigitalOcean App Platform)
->
-> The plan and schema were drafted the night before. All running code was written at the event.
+> **Live dashboard:** https://muscle-memory-mjivi.ondigitalocean.app · **Play:** https://muscle-memory-mjivi.ondigitalocean.app/#host
 
 ---
 
@@ -20,7 +18,7 @@ It's how you learned to drive. At first you think through every move. Eventually
 
 *"How do you know the cuts are safe?"* Every cut is checked by running the code's tests, plus a second set of hidden tests the AI never sees. A cut that breaks anything is reverted.
 
-## What we built and measured (real run, Nov 13)
+## Results
 
 Two Gemini coding agents (`gemini-4-hydrogen`, `gemini-3.5-flash-lite`) implemented the same 10 tickets on a small Python library (20 PRs). Muscle Memory cleaned every PR that passed its own tests.
 
