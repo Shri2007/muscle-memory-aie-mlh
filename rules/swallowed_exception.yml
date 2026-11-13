@@ -1,0 +1,15 @@
+# learned by Muscle Memory from 5 verified decisions
+rules:
+- id: mm-swallowed_exception-v1
+  languages:
+  - python
+  severity: WARNING
+  message: Catching broad Exception to return or assign a fallback silently hides real bugs.
+  pattern-regex: (?m)^[ \t]*except[ \t]+Exception[ \t]*:[ \t]*\n[ \t]+(?:return\b|pass\b|\w+[ \t]*=(?!=))
+  metadata:
+    kind: swallowed_exception
+    support: 5
+    version: 1
+    active: true
+    verdict: cut
+    learned_at: '2026-11-13T19:53:33+00:00'
