@@ -1,5 +1,8 @@
 # Muscle Memory
 
+**Live dashboard:** https://muscle-memory-mjivi.ondigitalocean.app  
+**Code:** https://github.com/Shri2007/muscle-memory-aie-mlh
+
 **A software factory that turns slow thinking into reflexes.**
 
 ## What it does

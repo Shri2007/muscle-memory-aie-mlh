@@ -4,6 +4,8 @@
 
 AIE x MLH Hackathon @ Code Summit · Bright Data, SF · Nov 13, 2026
 
+> **Live dashboard:** https://muscle-memory-mjivi.ondigitalocean.app (snapshot of a real run; hosted on DigitalOcean App Platform)
+>
 > The plan and schema were drafted the night before. All running code was written at the event.
 
 ---
