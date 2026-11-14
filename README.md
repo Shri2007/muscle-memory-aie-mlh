@@ -4,6 +4,10 @@
 
 AIE x MLH Hackathon @ Code Summit · Bright Data, SF · Nov 13, 2026
 
+🏆 **1st Place, AIE x MLH Hackathon @ Code Summit**
+
+<img src="docs/first-place.jpg" alt="The Muscle Memory team holding the first-place check" width="600">
+
 > **Live dashboard:** https://muscle-memory-mjivi.ondigitalocean.app · **Play:** https://muscle-memory-mjivi.ondigitalocean.app/#host
 
 ---
